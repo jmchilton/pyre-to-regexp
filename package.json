@@ -1,7 +1,7 @@
 {
-  "name": "pcre-to-regexp",
-  "version": "0.0.4",
-  "description": "Converts PCRE regexp strings to JavaScript RegExp instances",
+  "name": "pyre-to-regexp",
+  "version": "0.0.5",
+  "description": "Converts Python-like (re) regular expressions to JavaScript RegExp instances",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -11,25 +11,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/TooTallNate/pcre-to-regexp.git"
+    "url": "git://github.com/jmchilton/pyre-to-regexp.git"
   },
   "keywords": [
-    "pcre",
     "regexp",
-    "convert",
-    "js",
-    "php",
-    "preg",
-    "preg_replace",
-    "preg_match"
+    "convert"
   ],
-  "author": "Nathan Rajlich <nathan@tootallnate.net>",
+  "author": "John Chilton <jmchilton@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/TooTallNate/pcre-to-regexp/issues"
+    "url": "https://github.com/jmchilton/pyre-to-regexp/issues"
   },
-  "homepage": "https://github.com/TooTallNate/pcre-to-regexp",
+  "homepage": "https://github.com/jmchilton/pyre-to-regexp",
   "devDependencies": {
-    "mocha": "2"
+    "mocha": "2",
+    "yamljs": "0.3.0"
   }
 }

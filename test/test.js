@@ -1,6 +1,52 @@
 
 var PCRE = require('../');
 var assert = require('assert');
+YAML = require('yamljs');
+var tests = YAML.load('test/test-data.yml')
+
+function itShouldMatch(regexpDescription) {
+  var against = regexpDescription.against;
+  var regex = regexpDescription.regex;
+  var replacement = regexpDescription.replacement;
+  var invalidReplacement = regexpDescription.invalid_replacement;
+
+  if(regexpDescription.captures) {
+    it(regex + ' should capture ' + regexpDescription.captures + " against " + regexpDescription.against, function() {
+      var exp = PCRE(regex);
+      var match = exp.exec(against);
+      assert.equal(match[0], regexpDescription.captures);
+    });
+  } else if(regexpDescription.matches === true) {
+    it(regex + ' should match ' + against, function() {
+      var exp = PCRE(regex);
+      var match = exp.exec(against);
+      assert(match);
+    });
+  } else if(regexpDescription.matches === false) {
+    it(regex + ' should not match ' + against, function() {
+      var exp = PCRE(regex);
+      var match = exp.exec(against);
+      assert(!match);
+    });
+  } else if(replacement && invalidReplacement) {
+    var replacement = replacement;
+    var becomes = regexpDescription.becomes;
+    it(regex + ' with replacement ' + replacement + " throws error", function() {
+      var exp = PCRE(regex);
+      assert.throws(function() {exp.pyreReplace(against, replacement)}, Error);
+    });
+  } else if(replacement) {
+    var replacement = replacement;
+    var becomes = regexpDescription.becomes;
+    it(regex + ' against ' + against + ' after replacement on ' + replacement + ' should be ' + becomes, function() {
+      var exp = PCRE(regex);
+      var actualBecomes = exp.pyreReplace(against, replacement);
+      assert.equal(becomes, actualBecomes);
+    });
+  } else {
+    assert(false);
+  }
+}
 
 describe('PCRE(pattern[, flags])', function () {
 
@@ -13,21 +59,25 @@ describe('PCRE(pattern[, flags])', function () {
     assert(isRegExp(r));
   });
 
-  describe('given "#https?:\/\/speakerdeck.com\/.*#i"', function () {
+  describe('regular expression matching', function() {
+    tests.forEach(itShouldMatch);
+  });
+
+  describe('given "https?:\/\/speakerdeck.com\/.*"', function () {
 
     it('should match "https://speakerdeck.com/tootallnate/node-gyp-baynode-meetup-september-6-2012"', function () {
       var url = 'https://speakerdeck.com/tootallnate/node-gyp-baynode-meetup-september-6-2012';
-      var re = PCRE("#https?:\/\/speakerdeck.com\/.*#i");
+      var re = PCRE("https?:\/\/speakerdeck.com\/.*");
       assert(re.test(url));
     });
 
   });
 
-  describe('given "%^https?:\/\/twitter\\.com(\/\\#\\!)?\/(?P<username>[a-zA-Z0-9_]{1,20})\\\/status(es)?\/(?P<id>\\d+)\/?$%i"', function () {
+  describe('given "^https?:\/\/twitter\\.com(\/\\#\\!)?\/(?P<username>[a-zA-Z0-9_]{1,20})\\\/status(es)?\/(?P<id>\\d+)\/?$"', function () {
 
     it('should have [ , "username", , "id" ] for keys', function () {
       var keys = [];
-      var re = PCRE("%^https?:\/\/twitter\\.com(\/\\#\\!)?\/(?P<username>[a-zA-Z0-9_]{1,20})\\\/status(es)?\/(?P<id>\\d+)\/?$%i", keys);
+      var re = PCRE("^https?:\/\/twitter\\.com(\/\\#\\!)?\/(?P<username>[a-zA-Z0-9_]{1,20})\\\/status(es)?\/(?P<id>\\d+)\/?$", keys);
       var expectedKeys = new Array(4);
       expectedKeys[1] = 'username';
       expectedKeys[3] = 'id';
@@ -35,154 +85,11 @@ describe('PCRE(pattern[, flags])', function () {
     });
 
     it('should match "https://twitter.com/tootallnate/status/481604870626349056"', function () {
-      var re = PCRE("%^https?:\/\/twitter\\.com(\/\\#\\!)?\/(?P<username>[a-zA-Z0-9_]{1,20})\\\/status(es)?\/(?P<id>\\d+)\/?$%i");
+      var re = PCRE("^https?:\/\/twitter\\.com(\/\\#\\!)?\/(?P<username>[a-zA-Z0-9_]{1,20})\\\/status(es)?\/(?P<id>\\d+)\/?$");
       var match = re.exec('https://twitter.com/tootallnate/status/481604870626349056');
       assert(match);
       assert(match[2] === 'tootallnate');
       assert(match[4] === '481604870626349056');
-    });
-
-  });
-
-  // "Character classes"
-  describe('given "/[:alnum:]/"', function () {
-
-    it('should match "1"', function () {
-      var re = PCRE("/[:alnum:]/");
-      assert(re.test('1'));
-    });
-
-    it('should match "0"', function () {
-      var re = PCRE("/[:alnum:]/");
-      assert(re.test('0'));
-    });
-
-    it('should match "a"', function () {
-      var re = PCRE("/[:alnum:]/");
-      assert(re.test('a'));
-    });
-
-    it('should match "Z"', function () {
-      var re = PCRE("/[:alnum:]/");
-      assert(re.test('Z'));
-    });
-
-  });
-
-  describe('given "/[:lower:]/"', function () {
-
-    it('should match "a"', function () {
-      var re = PCRE("/[:lower:]/");
-      assert(re.test('a'));
-    });
-
-    it('should not match "A"', function () {
-      var re = PCRE("/[:lower:]/");
-      assert(!re.test('A'));
-    });
-
-    it('should not match "0"', function () {
-      var re = PCRE("/[:lower:]/");
-      assert(!re.test('0'));
-    });
-
-  });
-
-  describe('given "/[:digit:]/"', function () {
-
-    it('should match "3"', function () {
-      var re = PCRE("/[:digit:]/");
-      assert(re.test('3'));
-    });
-
-    it('should not match "G"', function () {
-      var re = PCRE("/[:digit:]/");
-      assert(!re.test('G'));
-    });
-
-  });
-
-  describe('given "/[:punct:]/"', function () {
-
-    it('should match "]"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(re.test(']'));
-    });
-
-    it('should match "!"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(re.test('!'));
-    });
-
-    it('should match "/"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(re.test('/'));
-    });
-
-    it('should match "\\"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(re.test('\\'));
-    });
-
-    it('should match "^"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(re.test('^'));
-    });
-
-    it('should match "|"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(re.test('|'));
-    });
-
-    it('should match "~"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(re.test('~'));
-    });
-
-    it('should not match " "', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(!re.test(' '));
-    });
-
-    it('should not match "f"', function () {
-      var re = PCRE("/[:punct:]/");
-      assert(!re.test('f'));
-    });
-
-  });
-
-  // PHP 5.2.2-style "alternative" named capture stynax using single quotes
-  describe('given "#(?\'name\'foo)bar#"', function () {
-
-    it('should have [ "name" ] for keys', function () {
-      var keys = [];
-      var re = PCRE("#(?\'name\'foo)bar#", keys);
-      assert.deepEqual(keys, ['name']);
-    });
-
-    it('should match "foobar"', function () {
-      var re = PCRE("#(?\'name\'foo)bar#");
-      var match = re.exec('foobar');
-      assert(match);
-      assert(match[1] === 'foo');
-    });
-
-  });
-
-  // PHP 5.2.2-style "alternative" named capture stynax using angle brackets
-  describe('given "#(?<name>foo)bar#"', function () {
-
-    it('should have [ "name" ] for keys', function () {
-      var keys = [];
-      var re = PCRE("#(?\'name\'foo)bar#", keys);
-      assert.deepEqual(keys, ['name']);
-    });
-
-    it('should match "foobar"', function () {
-      var re = PCRE("#(?<name>foo)bar#");
-      var match = re.exec('foobar');
-      assert(match);
-      assert(match[1] === 'foo');
     });
 
   });

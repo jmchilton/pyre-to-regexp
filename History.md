@@ -1,3 +1,9 @@
+0.0.5 / 2018-04-05
+==================
+
+  * Forked the pcre-to-regexp project as pyre-to-regexp and adapted for Python-like
+    regular expressions.
+  * Added tests as a YAML file with matching Python script to test same regexeps.
 
 0.0.4 / 2014-07-10
 ==================

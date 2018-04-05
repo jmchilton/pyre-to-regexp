@@ -1,77 +1,33 @@
-
 /**
  * Module exports.
  */
 
-exports = module.exports = PCRE;
+exports = module.exports = pyre;
 
 /**
- * Mapping of "character class" names to their JS RegExp equivalent.
- * So that /[:digit:]/ gets converted into /\d/, etc.
- *
- * See: http://en.wikipedia.org/wiki/Regular_expression#Character_classes
- */
-
-exports.characterClasses = {
-  alnum: '[A-Za-z0-9]',
-  word: '[A-Za-z0-9_]',
-  alpha: '[A-Za-z]',
-  blank: '[ \\t]',
-  cntrl: '[\\x00-\\x1F\\x7F]',
-  digit: '\\d',
-  graph: '[\\x21-\\x7E]',
-  lower: '[a-z]',
-  print: '[\\x20-\\x7E]',
-  punct: '[\\]\\[!"#$%&\'()*+,./:;<=>?@\\\\^_`{|}~-]',
-  space: '\\s',
-  upper: '[A-Z]',
-  xdigit: '[A-Fa-f0-9]'
-};
-
-/**
- * Returns a JavaScript RegExp instance from the given PCRE-compatible string.
- * Flags may be passed in after the final delimiter in the `format` string.
+ * Returns a JavaScript RegExp instance from the given Python-like string.
  *
  * An empty array may be passsed in as the second argument, which will be
  * populated with the "named capture group" names as Strings in the Array,
  * once the RegExp has been returned.
  *
- * @param {String} pattern - PCRE regexp string to compile to a JS RegExp
- * @param {Array} [namedCaptures] - optional empty array, which will be populated with the named captures extracted from the PCRE regexp
- * @return {RegExp} returns a JavaScript RegExp instance from the given `pattern` and optionally `flags`
+ * @param {String} pattern - Python-like regexp string to compile to a JS RegExp
+ * @return {RegExp} returns a JavaScript RegExp instance from the given `pattern`
  * @public
  */
-
-function PCRE (pattern, namedCaptures) {
+function pyre(pattern, namedCaptures) {
   pattern = String(pattern || '').trim();
-  var originalPattern = pattern;
-  var delim;
-  var flags = '';
-
-  // A delimiter can be any non-alphanumeric, non-backslash,
-  // non-whitespace character.
-  var hasDelim = /^[^a-zA-Z\\\s]/.test(pattern);
-  if (hasDelim) {
-    delim = pattern[0];
-    var lastDelimIndex = pattern.lastIndexOf(delim);
-
-    // pull out the flags in the pattern
-    flags += pattern.substring(lastDelimIndex + 1);
-
-    // strip the delims from the pattern
-    pattern = pattern.substring(1, lastDelimIndex);
-  }
 
   // populate namedCaptures array and removed named captures from the `pattern`
+  namedCaptures = namedCaptures == undefined ? [] : namedCaptures;
   var numGroups = 0;
   pattern = replaceCaptureGroups(pattern, function (group) {
-    if (/^\(\?[P<']/.test(group)) {
-      // PCRE-style "named capture"
+    if (/^\(\?P[<]/.test(group)) {
+      // Python-style "named capture"
       // It is possible to name a subpattern using the syntax (?P<name>pattern).
       // This subpattern will then be indexed in the matches array by its normal
-      // numeric position and also by name. PHP 5.2.2 introduced two alternative
-      // syntaxes (?<name>pattern) and (?'name'pattern).
-      var match = /^\(\?P?[<']([^>']+)[>']([^\)]+)\)$/.exec(group);
+      // numeric position and also by name.
+      var match = /^\(\?P[<]([^>]+)[>]([^\)]+)\)$/.exec(group);
       if (namedCaptures) namedCaptures[numGroups] = match[1];
       numGroups++;
       return '(' + match[2] + ')';
@@ -85,22 +41,70 @@ function PCRE (pattern, namedCaptures) {
     }
   });
 
-  // replace "character classes" with their raw RegExp equivalent
-  pattern = pattern.replace(/\[\:([^\:]+)\:\]/g, function (characterClass, name) {
-    return exports.characterClasses[name] || characterClass;
-  });
-
-  // TODO: convert PCRE-only flags to JS
-  // TODO: handle lots more stuff....
-  // http://www.php.net/manual/en/reference.pcre.pattern.syntax.php
-
-  var regexp = new RegExp(pattern, flags);
-
-  regexp.delimiter = delim;
-  regexp.pcrePattern = originalPattern;
-  regexp.pcreFlags = flags;
-
+  var regexp = new RegExp(pattern);
+  regexp.pyreReplace = function(source, replacement) {
+    var jsReplacement = pyreReplacement(replacement, namedCaptures);
+    return source.replace(this, jsReplacement);
+  }
   return regexp;
+}
+
+function pyreReplacement(replacement, namedCaptures) {
+  var jsReplacement = "";
+  var i = 0;
+  var replacementLength = replacement.length;
+  while(i < replacementLength) {
+    var cur = replacement[i];
+    if(cur == '\\' && i != (replacementLength - 1)) {
+      var next = replacement[i + 1];
+      if(next == '\\') {
+        jsReplacement += '\\';
+        i += 2;
+      } else if(next == 'g' && i < (replacementLength - 3)) {
+        var closeIndex = null;
+        for(var j = i + 3; j < replacementLength; j++) {
+          if(replacement[j] == ">") {
+            closeIndex = j;
+            break;
+          }
+        }
+        if(replacement[i + 2] == "<" && closeIndex) {
+          var group = replacement.substring(i + 3, closeIndex);
+          if(isNaN(group)) {
+            for(var k = 0; k < namedCaptures.length; k++) {
+              if(group == namedCaptures[k]) {
+                group = k + 1;
+                break;
+              }
+            }
+          }
+          jsReplacement += "$" + group;
+          i = closeIndex + 1;
+        } else if(replacement[i + 2] == "<") {
+          throw Error("No close for regular expression replacement group \\g<");
+        } else {
+          jsReplacement += cur;
+          i++;
+        }
+      } else if(next == '0') {
+        jsReplacement += '$&';
+        i += 2;
+      } else if(!isNaN(next)){
+        jsReplacement += '$' + next;
+        i += 2;
+      } else {
+        jsReplacement += cur;
+        i++;
+      }
+    } else if(cur == '$' && i != (replacement.length - 1)) {
+      jsReplacement += '$$';
+      i++;
+    } else {
+      jsReplacement += cur;
+      i++;
+    }
+  }
+  return jsReplacement;
 }
 
 /**
@@ -110,7 +114,6 @@ function PCRE (pattern, namedCaptures) {
  *
  * @private
  */
-
 function replaceCaptureGroups (pattern, fn) {
   var start;
   var depth = 0;
