@@ -1,6 +1,6 @@
 {
   "name": "pyre-to-regexp",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Converts Python-like (re) regular expressions to JavaScript RegExp instances",
   "main": "index.js",
   "directories": {
