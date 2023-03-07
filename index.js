@@ -12,7 +12,8 @@ exports = module.exports = pyre;
  * once the RegExp has been returned.
  *
  * @param {String} pattern - Python-like regexp string to compile to a JS RegExp
- * @return {RegExp} returns a JavaScript RegExp instance from the given `pattern`
+ * @return {import("./types").PyreRegExp} returns a JavaScript RegExp from the given `pattern`,
+ *  with an additional function `pyreReplace` for Python-like replacement
  * @public
  */
 function pyre(pattern, namedCaptures) {

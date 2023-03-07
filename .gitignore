@@ -2,3 +2,5 @@
 
 # local dev files
 /?.js
+
+package-lock.json

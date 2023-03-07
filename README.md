@@ -24,8 +24,10 @@ API
 
 ### pyre(String pattern[, Array keys]) → RegExp
 
-Returns a JavaScript RegExp instance from the given Python-compatible string.
+Returns a JavaScript RegExp instance from the given Python-like regular expression string.
 
-An empty array may be passsed in as the second argument, which will be
+An empty array may be passed in as the second argument, which will be
 populated with the "named capture group" names as Strings in the Array,
 once the RegExp has been returned.
+
+The returned RegExp has an additional function `pyreReplace`, for Python-like replacements
